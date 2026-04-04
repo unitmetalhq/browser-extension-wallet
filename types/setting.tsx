@@ -25,10 +25,4 @@ export interface WalletSettings {
    * The wallet can still sign transactions offline and broadcast them manually.
    */
   offlineMode: boolean;
-  /**
-   * When true, window.ethereum.isMetaMask is set to true so dApps that
-   * gate on isMetaMask will accept this wallet. Has no effect on signing logic.
-   * Read synchronously from localStorage by inpage.content.ts at inject time.
-   */
-  pretendToBeMetamask: boolean;
 }

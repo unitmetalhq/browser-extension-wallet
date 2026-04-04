@@ -16,14 +16,7 @@
 //     The modern multi-wallet discovery protocol. dApps (Uniswap, Aave, etc.)
 //     fire eip6963:requestProvider on window; every injected wallet responds
 //     with eip6963:announceProvider carrying its name, icon, and provider.
-//     This is what populates the wallet picker in modern dApps — isMetaMask
-//     alone does not get you into that list.
-//
-//   pretendToBeMetamask mode
-//     When enabled (read from localStorage at inject time), the EIP-6963
-//     announcement uses MetaMask's name and rdns ('io.metamask') so the dApp
-//     renders a MetaMask entry backed by this wallet. isMetaMask is also set
-//     to true for legacy dApps that check that flag directly.
+//     This is what populates the wallet picker in modern dApps.
 
 import iconRaw from '@/assets/icon.svg?raw';
 import type { PageRequest, PageResponse } from '@/types/messages';
@@ -34,18 +27,6 @@ export default defineContentScript({
   runAt: 'document_start', // must run before any dApp code reads window.ethereum
 
   main() {
-    // ── Read settings from localStorage synchronously ──────────────────────────
-    // inpage scripts run at document_start and cannot do async storage reads
-    // without delaying injection. settingsAtom writes the full WalletSettings
-    // object under 'wallet-settings', so we read the same key here.
-    let pretendToBeMetamask = false;
-    try {
-      const stored = localStorage.getItem('wallet-settings');
-      if (stored) {
-        pretendToBeMetamask = JSON.parse(stored)?.pretendToBeMetamask === true;
-      }
-    } catch {}
-
     // ── Pending request map ────────────────────────────────────────────────────
     // Tracks in-flight requests by requestId. Each entry holds the method name
     // (needed to update selectedAddress on eth_requestAccounts) plus the
@@ -62,11 +43,6 @@ export default defineContentScript({
 
     // ── EIP-1193 provider ──────────────────────────────────────────────────────
     const provider = {
-      // When pretendToBeMetamask is enabled, set isMetaMask: true so legacy dApps
-      // that gate on this flag will accept the wallet. Also expose _metamask.isUnlocked
-      // which some older dApps check alongside isMetaMask.
-      isMetaMask: pretendToBeMetamask,
-      ...(pretendToBeMetamask && { _metamask: { isUnlocked: () => true } }),
       isUnitMetal: true,   // always present so our own code can identify the provider
       chainId: '0x1',      // Ethereum mainnet (updated by chainChanged events)
       networkVersion: '1', // legacy property still read by some dApps
@@ -173,23 +149,12 @@ export default defineContentScript({
     // Vite's ?raw suffix and encode it inline.
     const iconDataUri = `data:image/svg+xml,${encodeURIComponent(iconRaw)}`;
 
-    // When pretendToBeMetamask is on, announce using MetaMask's identity.
-    // rdns ('io.metamask') is the key field — wagmi and other connection
-    // libraries match wallets by rdns, so using MetaMask's rdns makes the
-    // dApp render this wallet wherever it would show MetaMask.
-    const eip6963Info = pretendToBeMetamask
-      ? {
-          uuid: 'b3e3a7b0-7c6a-4d8e-9f2a-1c3d5e7f9b1b', // stable; unique per announce identity
-          name: 'MetaMask',
-          icon: iconDataUri,
-          rdns: 'io.metamask',
-        }
-      : {
-          uuid: 'b3e3a7b0-7c6a-4d8e-9f2a-1c3d5e7f9b1a',
-          name: 'UnitMetal',
-          icon: iconDataUri,
-          rdns: 'io.unitmetal',
-        };
+    const eip6963Info = {
+      uuid: 'df8ef8a1-f947-4dcf-9997-1f903e644a1f',
+      name: 'UnitMetal Wallet',
+      icon: iconDataUri,
+      rdns: 'com.unitmetal.wallet',
+    };
 
     // detail must be frozen per the EIP-6963 spec so dApps cannot mutate it.
     const eip6963Detail = Object.freeze({ info: Object.freeze(eip6963Info), provider });

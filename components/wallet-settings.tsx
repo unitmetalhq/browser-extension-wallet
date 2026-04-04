@@ -74,12 +74,6 @@ export default function WalletSettings() {
     setSettings((prev) => ({ ...prev, offlineMode: checked }));
   }
 
-  function handleMetamaskToggle(checked: boolean) {
-    setSettings((prev) => ({ ...prev, pretendToBeMetamask: checked }));
-    // The inpage script reads this from localStorage at page-load time, so the
-    // change takes effect on the next page navigation or reload.
-  }
-
   return (
     <div className="flex flex-col border-2 border-primary gap-2 pb-8">
       <div className="flex flex-row justify-between items-center bg-primary text-secondary pl-1">
@@ -200,35 +194,6 @@ export default function WalletSettings() {
               </p>
             </div>
           )}
-        </div>
-
-        <div className="border-t border-border" />
-
-        {/* ── MetaMask compatibility ────────────────────────────────────── */}
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-sm font-semibold">MetaMask Compatibility</h2>
-            <p className="text-xs text-muted-foreground">
-              Sets <code className="font-mono">window.ethereum.isMetaMask = true</code> so
-              dApps that only accept MetaMask will recognise this wallet.
-              Takes effect on the next page load. Does not affect signing.
-            </p>
-          </div>
-
-          <div className="flex flex-row items-center gap-3">
-            <Switch
-              checked={settings.pretendToBeMetamask ?? false}
-              onCheckedChange={handleMetamaskToggle}
-              className="rounded-none **:data-[slot=switch-thumb]:rounded-none"
-            />
-            <Label>
-              {settings.pretendToBeMetamask ? (
-                <span className="text-primary">Enabled — appearing as MetaMask</span>
-              ) : (
-                <span className="text-muted-foreground">Disabled</span>
-              )}
-            </Label>
-          </div>
         </div>
 
       </div>
