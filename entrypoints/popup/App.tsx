@@ -5,14 +5,16 @@ import BackupWallet from '@/components/backup-wallet';
 import SendTokens from '@/components/send-tokens';
 import Balances from '@/components/balances';
 import WalletSettings from '@/components/wallet-settings';
+import { Wallet, ArrowUpRight, Save, Settings } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-type Tab = 'wallets' | 'send' | 'balances' | 'settings';
+type Tab = 'wallets' | 'send' | 'backup' | 'settings';
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'wallets', label: 'Wallets' },
-  { id: 'send', label: 'Send' },
-  { id: 'balances', label: 'Balances' },
-  { id: 'settings', label: 'Settings' },
+const TABS: { id: Tab; icon: LucideIcon }[] = [
+  { id: 'wallets', icon: Wallet },
+  { id: 'send', icon: ArrowUpRight },
+  { id: 'backup', icon: Save },
+  { id: 'settings', icon: Settings },
 ];
 
 function App() {
@@ -26,7 +28,7 @@ function App() {
         {activeTab === 'wallets' && (
           <div className="flex flex-col gap-4 p-3">
             <ManageWallet />
-            <BackupWallet />
+            <Balances />
           </div>
         )}
         {activeTab === 'send' && (
@@ -34,9 +36,9 @@ function App() {
             <SendTokens />
           </div>
         )}
-        {activeTab === 'balances' && (
+        {activeTab === 'backup' && (
           <div className="p-3">
-            <Balances />
+            <BackupWallet />
           </div>
         )}
         {activeTab === 'settings' && (
@@ -47,20 +49,23 @@ function App() {
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 border-t-2 border-primary bg-background grid grid-cols-4 h-[44px]">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`text-sm font-medium hover:cursor-pointer transition-colors ${
-              activeTab === tab.id
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center justify-center hover:cursor-pointer transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-primary text-secondary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useAtom } from "jotai";
 import { settingsAtom } from "@/atoms/settingsAtom";
+import { browser } from "wxt/browser";
+import { validateUrl } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -29,33 +31,23 @@ export default function WalletSettings() {
     setRpcError(null);
   }
 
-  function validateRpcUrl(url: string): string | null {
-    if (!url.trim()) return "RPC URL is required";
-    try {
-      const parsed = new URL(url.trim());
-      if (!["http:", "https:"].includes(parsed.protocol)) {
-        return "RPC URL must use http or https";
-      }
-    } catch {
-      return "Invalid URL";
-    }
-    return null;
-  }
-
   function handleSaveRpc() {
-    const err = validateRpcUrl(rpcUrl);
+    const err = validateUrl(rpcUrl);
     if (err) {
       setRpcError(err);
       return;
     }
+    const trimmedUrl = rpcUrl.trim();
     setSettings((prev) => ({
       ...prev,
       rpc: {
         name: rpcName.trim() || undefined,
-        url: rpcUrl.trim(),
+        url: trimmedUrl,
         chainId: mainnet.id,
       },
     }));
+    // Mirror to browser.storage.local so the background service worker can read it.
+    browser.storage.local.set({ rpcUrl: trimmedUrl });
     setRpcDirty(false);
     // Reload so that providers.tsx re-reads the saved RPC and reinitialises wagmi transport
     window.location.reload();
@@ -63,6 +55,8 @@ export default function WalletSettings() {
 
   function handleResetRpc() {
     setSettings((prev) => ({ ...prev, rpc: null }));
+    // Remove the mirrored RPC URL so the background falls back to the default.
+    browser.storage.local.remove('rpcUrl');
     setRpcName("");
     setRpcUrl("");
     setRpcDirty(false);

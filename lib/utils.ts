@@ -15,6 +15,13 @@ export function truncateHash(hash: string | undefined) {
   return `${hash.slice(0, 6)}...${hash.slice(-4)}`;
 }
 
+export function chainIdToName(chainId: number) {
+  switch (chainId) {
+    case 1: return "Ethereum";
+    default: return `Chain ${chainId}`;
+  }
+}
+
 export function serializeTransactionObject(transactionObject: object): string {
   return JSON.stringify(
     transactionObject,

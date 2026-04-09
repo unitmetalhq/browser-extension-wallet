@@ -7,19 +7,24 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { truncateAddress } from "@/lib/utils";
 import { walletsAtom } from "@/atoms/walletsAtom";
 import { activeWalletAtom } from "@/atoms/activeWalletAtom";
-import CopyButton from "@/components/copy-button";
+import InlineCopyButton from "@/components/inline-copy-button";
 import { Cuer } from "cuer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ExportWallet from "@/components/export-wallet";
 import DeleteWallet from "@/components/delete-wallet";
 import ImportWallet from "@/components/import-wallet";
-
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { QrCode } from "lucide-react";
+import ManageSessionPassword from "@/components/manage-session-password";
+import { clearSessionPassword } from "@/lib/password-session";
 
 export default function ManageWallet() {
   const wallets = useAtomValue<Array<UmKeystore>>(walletsAtom);
@@ -33,31 +38,41 @@ export default function ManageWallet() {
   }));
 
   function handleSelectWallet(value: string | null) {
-    if (value == null) {
+    if (!value) {
       setActiveWallet(null);
+      clearSessionPassword();
       return;
     }
     const wallet = wallets.find((w) => w.id === value) ?? null;
     setActiveWallet(wallet);
+    clearSessionPassword();
     if (wallet?.address) {
       browser.storage.local.set({ activeAddress: wallet.address });
     }
   }
 
   return (
-    <div className="flex flex-col border-2 border-primary gap-2 pb-8">
+    <div className="flex flex-col border-2 border-primary gap-2 pb-6">
       <div className="flex flex-row justify-between items-center bg-primary text-secondary pl-1">
         <h1 className="text-md font-bold">Wallets</h1>
       </div>
       {wallets && wallets.length > 0 ? (
         <div className="flex flex-col gap-4 px-4 py-2">
           <div className="flex flex-col gap-2">
-            <Select items={walletItems} value={activeWallet?.id ?? ''} onValueChange={handleSelectWallet}>
+            <Select value={activeWallet?.id ?? null} onValueChange={handleSelectWallet}>
               <SelectTrigger className="w-full border-primary border rounded-none">
-                <SelectValue placeholder="Select a wallet" />
+                {activeWallet ? (
+                  <p>{activeWallet.name}</p>
+                ) : (
+                  <p className="text-muted-foreground">No wallet selected</p>
+                )}
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
+                  <SelectItem value={null}>
+                    <p className="text-muted-foreground">No wallet selected</p>
+                  </SelectItem>
+                  <SelectSeparator />
                   {walletItems.map((wallet) => (
                     <SelectItem key={wallet.value} value={wallet.value}>
                       <div className="flex flex-row gap-2">
@@ -72,51 +87,85 @@ export default function ManageWallet() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex flex-row gap-1 items-center">
+            <p className="text-xs text-muted-foreground font-mono break-all">{activeWallet?.address}</p>
+            <InlineCopyButton text={activeWallet?.address} />
+          </div>
+
+          {/* QR + Lock/Unlock buttons */}
           <div className="flex flex-row gap-2">
-            <CopyButton disabledCondition={!activeWallet} text={activeWallet?.address || ""} />
+            {/* QR Code */}
+            <Dialog>
+              <DialogTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-none hover:cursor-pointer"
+                    disabled={!activeWallet?.address}
+                    size="icon"
+                  />
+                }
+              >
+                <QrCode />
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>QR Code</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-[200px] h-[200px]">
+                    <Cuer arena="/unitmetal-symbol.svg" value={activeWallet?.address || ""} />
+                  </div>
+                  <p className="text-xs font-mono break-all text-center text-muted-foreground">
+                    {activeWallet?.address}
+                  </p>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Lock / Unlock */}
+            <ManageSessionPassword activeWallet={activeWallet} />
           </div>
-          <div className="w-[100px] h-[100px]">
-            {activeWallet?.address ? (
-              <Cuer
-                arena="/unitmetal-symbol.svg"
-                value={activeWallet?.address || ""}
-              />
-            ) : (
-              <div className="w-full h-full bg-primary/50 text-primary-foreground justify-center items-center flex text-center">
-                QR code
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col gap-2 mt-6 border-t-2 border-primary pt-4">
-            <Tabs defaultValue="create" className="w-full">
-              <TabsList className="border-primary border rounded-none">
-                <TabsTrigger className="rounded-none" value="create">
-                  Create
-                </TabsTrigger>
-                <TabsTrigger className="rounded-none" value="export">
-                  Export
-                </TabsTrigger>
-                <TabsTrigger className="rounded-none" value="import">
-                  Import
-                </TabsTrigger>
-                <TabsTrigger className="rounded-none" value="delete">
-                  Delete
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="create" className="flex flex-col gap-2">
-                <CreateWallet />
-              </TabsContent>
-              <TabsContent value="export" className="flex flex-col gap-2">
-                <ExportWallet />
-              </TabsContent>
-              <TabsContent value="import" className="flex flex-col gap-2">
-                <ImportWallet />
-              </TabsContent>
-              <TabsContent value="delete" className="flex flex-col gap-2">
-                <DeleteWallet />
-              </TabsContent>
-            </Tabs>
-          </div>
+
+          <Accordion className="border-t-2 border-primary">
+            <AccordionItem value="manage-wallets" className="border-none">
+              <AccordionTrigger className="pt-2 hover:no-underline font-medium">
+                Manage
+              </AccordionTrigger>
+              <AccordionContent>
+                <Tabs defaultValue="create" className="w-full">
+                  <TabsList className="border-primary border rounded-none">
+                    <TabsTrigger className="rounded-none" value="create">
+                      Create
+                    </TabsTrigger>
+                    <TabsTrigger className="rounded-none" value="export">
+                      Export
+                    </TabsTrigger>
+                    <TabsTrigger className="rounded-none" value="import">
+                      Import
+                    </TabsTrigger>
+                    <TabsTrigger className="rounded-none" value="delete">
+                      Delete
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="create" className="flex flex-col gap-2">
+                    <CreateWallet />
+                  </TabsContent>
+                  <TabsContent value="export" className="flex flex-col gap-2">
+                    <ExportWallet />
+                  </TabsContent>
+                  <TabsContent value="import" className="flex flex-col gap-2">
+                    <ImportWallet />
+                  </TabsContent>
+                  <TabsContent value="delete" className="flex flex-col gap-2">
+                    <DeleteWallet />
+                  </TabsContent>
+                </Tabs>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       ) : (
         <div className="flex flex-col gap-4 px-4 py-2">

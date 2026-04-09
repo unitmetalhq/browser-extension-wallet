@@ -26,6 +26,51 @@ import type {
   EthResultMessage,
 } from '@/types/messages';
 
+// ─── RPC proxy ────────────────────────────────────────────────────────────────
+// The background cannot read localStorage (where Jotai stores wallet-settings),
+// so the custom RPC URL is mirrored to browser.storage.local under 'rpcUrl'
+// whenever the user saves settings. Falls back to the build-time env var then
+// cloudflare-eth.com.
+
+const BUILD_TIME_RPC = import.meta.env.VITE_MAINNET_RPC_URL as string | undefined;
+
+async function getRpcUrl(): Promise<string> {
+  const data = await browser.storage.local.get('rpcUrl');
+  return (data.rpcUrl as string | undefined)
+    ?? BUILD_TIME_RPC
+    ?? 'https://cloudflare-eth.com';
+}
+
+async function forwardToRpc(
+  tabId: number,
+  requestId: string,
+  method: string,
+  params: unknown[],
+) {
+  try {
+    const rpcUrl = await getRpcUrl();
+    const res = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+    });
+    const json = await res.json() as {
+      result?: unknown;
+      error?: { code: number; message: string };
+    };
+    if (json.error) {
+      pushError(tabId, requestId, {
+        code: json.error.code ?? -32603,
+        message: json.error.message ?? 'RPC error',
+      });
+    } else {
+      pushResult(tabId, requestId, json.result ?? null);
+    }
+  } catch {
+    pushError(tabId, requestId, { code: -32603, message: 'RPC request failed' });
+  }
+}
+
 // ─── In-memory pending requests ───────────────────────────────────────────────
 // Keyed by requestId. Entries live here from the moment a popup is opened until
 // the user approves or rejects (or the service worker is restarted — in which
@@ -42,11 +87,18 @@ const pendingRequests = new Map<string, PendingEntry>();
 // ─── Methods that require the approval popup ──────────────────────────────────
 
 const APPROVAL_METHODS = new Set([
-  'eth_requestAccounts',    // connect wallet — reveals address to dApp
-  'personal_sign',          // sign arbitrary message (EIP-191)
-  'eth_signTypedData_v4',   // sign structured data (EIP-712)
-  'eth_sendTransaction',    // broadcast a transaction — highest risk
+  'eth_requestAccounts',    // connect wallet — opens connect.html
+  'personal_sign',          // sign arbitrary message — opens sign.html
+  'eth_signTypedData_v4',   // sign structured data — opens sign.html
+  'eth_sendTransaction',    // broadcast a transaction — opens approve.html
 ]);
+
+// Map each approval method to its dedicated popup page.
+function popupPageForMethod(method: string): string {
+  if (method === 'eth_requestAccounts') return 'connect.html';
+  if (method === 'personal_sign' || method === 'eth_signTypedData_v4') return 'sign.html';
+  return 'approve.html';
+}
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 // connectedOrigins: { [origin: string]: string[] }
@@ -142,18 +194,35 @@ async function handleEthRequest(msg: ContentToBackground, senderTabId: number) {
     // Open the approval popup. The requestId in the URL lets the popup verify it
     // is reading the correct pendingRequest from storage (guards against stale data
     // if a previous popup was closed without responding).
+    // connect needs less vertical space than sign/approve.
+    const popupHeight = msg.method === 'eth_requestAccounts' ? 460 : 600;
+    const popupWidth = 400;
+
+    // Position the popup at the top-right of the current browser window.
+    let left: number | undefined;
+    let top: number | undefined;
+    try {
+      const win = await browser.windows.getLastFocused();
+      left = (win.left ?? 0) + (win.width ?? 1280) - popupWidth;
+      top = win.top ?? 0;
+    } catch {}
+
     browser.windows.create({
-      url: browser.runtime.getURL(`/approval.html?requestId=${msg.requestId}`),
+      url: browser.runtime.getURL(`/${popupPageForMethod(msg.method)}?requestId=${msg.requestId}`),
       type: 'popup',
-      width: 400,
-      height: 600,
+      width: popupWidth,
+      height: popupHeight,
+      left,
+      top,
       focused: true,
     });
     return; // result will be pushed later by handleApprovalResult / handleApprovalReject
   }
 
-  // Unknown method — tell the dApp we don't support it.
-  pushError(tabId, msg.requestId, EIP1193_ERRORS.UNSUPPORTED);
+  // Unknown method — forward to the RPC node (eth_call, eth_estimateGas,
+  // eth_getTransactionCount, eth_blockNumber, eth_feeHistory, etc.).
+  // All standard JSON-RPC read methods fall through here.
+  forwardToRpc(tabId, msg.requestId, msg.method, msg.params);
 }
 
 // ─── Approval result handlers ─────────────────────────────────────────────────
