@@ -6,6 +6,9 @@ import SendTokens from '@/components/send-tokens';
 import Balances from '@/components/balances';
 import BackupWallet from '@/components/backup-wallet';
 import WalletSettings from '@/components/wallet-settings';
+import ManageAddressBook from '@/components/manage-address-book';
+import OutgoingActivity from '@/components/outgoing-activity';
+import IncomingActivity from '@/components/incoming-activity';
 
 export default function App() {
   const desktopTab = useAtomValue(desktopTabAtom);
@@ -28,6 +31,17 @@ export default function App() {
         {desktopTab === 'backup' && (
           <div className="w-[760px] mx-auto">
             <BackupWallet />
+          </div>
+        )}
+        {desktopTab === 'address-book' && (
+          <div className="w-[760px] mx-auto">
+            <ManageAddressBook />
+          </div>
+        )}
+        {desktopTab === 'activity' && (
+          <div className="grid lg:grid-cols-2 gap-4 w-full">
+            <OutgoingActivity />
+            <IncomingActivity />
           </div>
         )}
         {desktopTab === 'settings' && (

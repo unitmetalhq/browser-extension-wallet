@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { Bytes } from 'ox';
 import { browser } from 'wxt/browser';
-import { Lock, LockOpen, Loader2 } from 'lucide-react';
+import { Globe, LockOpen, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,16 +53,16 @@ function SignTypedDataScreen({ request }: { request: PendingRequest }) {
       <p className="text-sm text-muted-foreground">
         This site is requesting you to sign typed data.
       </p>
-      {domain?.name && (
+      {!!domain?.name && (
         <div className="border border-border p-3 flex flex-col gap-1">
           <p className="text-xs text-muted-foreground">Domain</p>
           <p className="text-sm font-medium">{domain.name as string}</p>
-          {domain.version && (
+          {!!domain.version && (
             <p className="text-xs text-muted-foreground">v{domain.version as string}</p>
           )}
         </div>
       )}
-      {typedData.primaryType && (
+      {!!typedData.primaryType && (
         <div className="border border-border p-3 flex flex-col gap-1">
           <p className="text-xs text-muted-foreground">Type</p>
           <p className="text-sm font-mono">{typedData.primaryType as string}</p>
@@ -161,21 +161,26 @@ export default function App() {
 
   if (!request || !wallet) {
     return (
-      <div className="flex flex-col w-[400px] h-[600px] items-center justify-center">
+      <div className="flex flex-col w-[400px] h-screen items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col w-[400px] h-[600px]">
-      <div className="flex flex-row items-center gap-2 px-4 py-3 border-b border-border bg-muted">
-        <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
-        <p className="text-sm text-muted-foreground truncate">{request.origin}</p>
-      </div>
+  const hostname = (() => { try { return new URL(request.origin).hostname; } catch { return request.origin; } })();
 
-      <div className="px-4 pt-4 pb-2">
-        <h1 className="text-lg font-bold">{METHOD_LABELS[request.method] ?? request.method}</h1>
+  return (
+    <div className="flex flex-col w-[400px] h-screen">
+      {/* Title */}
+      <div className="px-4 pt-3 pb-2">
+        <h1 className="text-sm font-bold">{METHOD_LABELS[request.method] ?? request.method}</h1>
+      </div>
+      <Separator />
+
+      {/* App identity */}
+      <div className="flex flex-row items-center gap-2 px-4 py-3 border-b border-border">
+        <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+        <p className="text-sm font-medium truncate">{hostname}</p>
       </div>
 
       <Separator />
@@ -185,7 +190,7 @@ export default function App() {
         {request.method === 'eth_signTypedData_v4' && <SignTypedDataScreen request={request} />}
       </div>
 
-      <div className="flex flex-col gap-3 px-4 pb-4 pt-2 border-t border-border">
+      <div className="flex flex-col gap-2 px-4 py-3 border-t border-border">
         {sessionActive ? (
           <p className="text-xs text-green-500 flex items-center gap-1.5">
             <LockOpen className="w-3.5 h-3.5" /> Session unlocked — no password needed
@@ -205,17 +210,14 @@ export default function App() {
           </div>
         )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={handleReject} disabled={loading}>
-            Reject
+          <Button variant="outline" className="rounded-none hover:cursor-pointer" onClick={handleReject} disabled={loading}>
+            Deny
           </Button>
-          <Button onClick={handleSign} disabled={loading || !password}>
-            {loading
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : 'Sign'
-            }
+          <Button className="rounded-none hover:cursor-pointer" onClick={handleSign} disabled={loading || !password}>
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign'}
           </Button>
         </div>
       </div>

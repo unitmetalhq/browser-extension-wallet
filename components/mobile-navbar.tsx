@@ -4,14 +4,19 @@ import BackupWallet from "@/components/backup-wallet";
 import SendTokens from "@/components/send-tokens";
 import Balances from "@/components/balances";
 import WalletSettings from "@/components/wallet-settings";
-import { Wallet, ArrowUpRight, Save, Settings } from "lucide-react";
+import ManageAddressBook from "@/components/manage-address-book";
+import OutgoingActivity from "@/components/outgoing-activity";
+import IncomingActivity from "@/components/incoming-activity";
+import { Wallet, BookUser, ArrowUpRight, TableProperties, Save, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-type Tab = "wallets" | "send" | "backup" | "settings";
+type Tab = "wallets" | "address-book" | "send" | "activity" | "backup" | "settings";
 
 const TABS: { id: Tab; icon: LucideIcon }[] = [
   { id: "wallets", icon: Wallet },
+  { id: "address-book", icon: BookUser },
   { id: "send", icon: ArrowUpRight },
+  { id: "activity", icon: TableProperties },
   { id: "backup", icon: Save },
   { id: "settings", icon: Settings },
 ];
@@ -28,12 +33,19 @@ export default function MobileNavbar() {
             <Balances />
           </div>
         )}
+        {activeTab === "address-book" && <ManageAddressBook />}
         {activeTab === "send" && <SendTokens />}
+        {activeTab === "activity" && (
+          <div className="grid grid-cols-1 gap-4">
+            <OutgoingActivity />
+            <IncomingActivity />
+          </div>
+        )}
         {activeTab === "backup" && <BackupWallet />}
         {activeTab === "settings" && <WalletSettings />}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 border-t-2 border-primary bg-background grid grid-cols-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}>
+      <div className="fixed bottom-0 left-0 right-0 border-t-2 border-primary bg-background grid grid-cols-6" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}>
         {TABS.map((tab) => {
           const Icon = tab.icon;
           return (

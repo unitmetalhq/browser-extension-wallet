@@ -1,4 +1,4 @@
-// ─── approval/App.tsx — transaction approval popup ────────────────────────────
+// ─── approve/App.tsx — transaction approval popup ─────────────────────────────
 //
 // Opened by background.ts for eth_sendTransaction only.
 // Decrypts the wallet with the user's password and broadcasts the transaction.
@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { createWalletClient, http, formatEther, type Hex } from 'viem';
 import { mainnet } from 'viem/chains';
 import { browser } from 'wxt/browser';
-import { Lock, LockOpen, Loader2 } from 'lucide-react';
+import { Globe, Lock, LockOpen, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,46 +17,12 @@ import { getSessionPassword } from '@/lib/password-session';
 import type { PendingRequest, ApprovalResultMessage, ApprovalRejectMessage } from '@/types/messages';
 import type { UmKeystore } from '@/types/wallet';
 
-function SendTransactionScreen({ request }: { request: PendingRequest }) {
-  const tx = request.params[0] as Record<string, string>;
-  const valueEth = tx.value ? formatEther(BigInt(tx.value)) : '0';
-
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">
-        This site is requesting to send a transaction on your behalf.
-      </p>
-      <div className="border border-border p-3 flex flex-col gap-2">
-        <div className="flex flex-col gap-0.5">
-          <p className="text-xs text-muted-foreground">To</p>
-          <p className="text-sm font-mono break-all">{tx.to ?? '—'}</p>
-        </div>
-        <Separator />
-        <div className="flex flex-col gap-0.5">
-          <p className="text-xs text-muted-foreground">Value</p>
-          <p className="text-sm">{valueEth} ETH</p>
-        </div>
-        {tx.data && tx.data !== '0x' && (
-          <>
-            <Separator />
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xs text-muted-foreground">Data</p>
-              <p className="text-sm font-mono break-all truncate">{tx.data.slice(0, 66)}…</p>
-            </div>
-          </>
-        )}
-        {tx.gas && (
-          <>
-            <Separator />
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xs text-muted-foreground">Gas limit</p>
-              <p className="text-sm">{parseInt(tx.gas, 16).toLocaleString()}</p>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
+function parseOrigin(origin: string) {
+  try {
+    return new URL(origin).hostname;
+  } catch {
+    return origin;
+  }
 }
 
 export default function App() {
@@ -134,30 +100,74 @@ export default function App() {
 
   if (!request || !wallet) {
     return (
-      <div className="flex flex-col w-[400px] h-[600px] items-center justify-center">
+      <div className="flex flex-col w-[400px] h-screen items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
+  const tx = request.params[0] as Record<string, string>;
+  const valueEth = tx.value ? formatEther(BigInt(tx.value)) : '0';
+  const hostname = parseOrigin(request.origin);
+
   return (
-    <div className="flex flex-col w-[400px] h-[600px]">
-      <div className="flex flex-row items-center gap-2 px-4 py-3 border-b border-border bg-muted">
-        <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
-        <p className="text-sm text-muted-foreground truncate">{request.origin}</p>
+    <div className="flex flex-col w-[400px] h-screen">
+      {/* Title */}
+      <div className="px-4 pt-3 pb-2">
+        <h1 className="text-sm font-bold">Approve Request</h1>
       </div>
-
-      <div className="px-4 pt-4 pb-2">
-        <h1 className="text-lg font-bold">Approve Transaction</h1>
-      </div>
-
       <Separator />
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <SendTransactionScreen request={request} />
+      {/* App identity */}
+      <div className="flex flex-row items-center gap-2 px-4 py-3 border-b border-border">
+        <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+        <p className="text-sm font-medium truncate">{hostname}</p>
       </div>
 
-      <div className="flex flex-col gap-3 px-4 pb-4 pt-2 border-t border-border">
+      {/* Transaction details */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2">
+        <p className="text-xs text-muted-foreground">Transaction details</p>
+
+        <div className="border border-border flex flex-col">
+          {tx.to && (
+            <>
+              <div className="px-3 py-2 flex flex-col gap-0.5">
+                <p className="text-xs text-muted-foreground">To</p>
+                <p className="text-xs font-mono break-all">{tx.to}</p>
+              </div>
+              <Separator />
+            </>
+          )}
+
+          <div className="px-3 py-2 flex flex-col gap-0.5">
+            <p className="text-xs text-muted-foreground">Value</p>
+            <p className="text-sm font-medium">{valueEth} ETH</p>
+          </div>
+
+          {tx.gas && (
+            <>
+              <Separator />
+              <div className="px-3 py-2 flex flex-col gap-0.5">
+                <p className="text-xs text-muted-foreground">Gas limit</p>
+                <p className="text-sm">{parseInt(tx.gas, 16).toLocaleString()}</p>
+              </div>
+            </>
+          )}
+
+          {tx.data && tx.data !== '0x' && (
+            <>
+              <Separator />
+              <div className="px-3 py-2 flex flex-col gap-0.5">
+                <p className="text-xs text-muted-foreground">Data</p>
+                <p className="text-xs font-mono break-all">{tx.data.slice(0, 66)}{tx.data.length > 66 ? '…' : ''}</p>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex flex-col gap-2 px-4 py-3 border-t border-border">
         {sessionActive ? (
           <p className="text-xs text-green-500 flex items-center gap-1.5">
             <LockOpen className="w-3.5 h-3.5" /> Session unlocked — no password needed
@@ -177,17 +187,14 @@ export default function App() {
           </div>
         )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={handleReject} disabled={loading}>
-            Reject
+          <Button variant="outline" className="rounded-none hover:cursor-pointer" onClick={handleReject} disabled={loading}>
+            Deny
           </Button>
-          <Button onClick={handleApprove} disabled={loading || !password}>
-            {loading
-              ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Sending…</span>
-              : 'Approve'
-            }
+          <Button className="rounded-none hover:cursor-pointer" onClick={handleApprove} disabled={loading || !password}>
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Approve'}
           </Button>
         </div>
       </div>

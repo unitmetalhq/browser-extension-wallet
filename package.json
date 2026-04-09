@@ -1,6 +1,6 @@
 {
-  "name": "wxt-react-starter",
-  "description": "manifest.json description",
+  "name": "UnitMetal Browser Extension Wallet",
+  "description": "Super lightweight extension wallet for professionals",
   "private": true,
   "version": "0.0.0",
   "type": "module",

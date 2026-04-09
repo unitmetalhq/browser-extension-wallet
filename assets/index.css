@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/jetbrains-mono";
 
 
 @custom-variant dark (&:is(.dark *));
@@ -127,4 +126,8 @@
   html {
     @apply font-sans;
     }
+}
+
+body, html {
+  font-family: 'JetBrains Mono Variable', monospace;
 }

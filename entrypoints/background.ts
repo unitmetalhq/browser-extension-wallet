@@ -94,7 +94,7 @@ const APPROVAL_METHODS = new Set([
 ]);
 
 // Map each approval method to its dedicated popup page.
-function popupPageForMethod(method: string): string {
+function popupPageForMethod(method: string): 'approve.html' | 'connect.html' | 'sign.html' {
   if (method === 'eth_requestAccounts') return 'connect.html';
   if (method === 'personal_sign' || method === 'eth_signTypedData_v4') return 'sign.html';
   return 'approve.html';
@@ -194,8 +194,8 @@ async function handleEthRequest(msg: ContentToBackground, senderTabId: number) {
     // Open the approval popup. The requestId in the URL lets the popup verify it
     // is reading the correct pendingRequest from storage (guards against stale data
     // if a previous popup was closed without responding).
-    // connect needs less vertical space than sign/approve.
-    const popupHeight = msg.method === 'eth_requestAccounts' ? 460 : 600;
+    // sign needs more vertical space for typed data; connect and approve use h-screen (auto).
+    const popupHeight = msg.method === 'personal_sign' || msg.method === 'eth_signTypedData_v4' ? 600 : 540;
     const popupWidth = 400;
 
     // Position the popup at the top-right of the current browser window.

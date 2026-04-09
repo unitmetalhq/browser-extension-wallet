@@ -5,14 +5,19 @@ import BackupWallet from '@/components/backup-wallet';
 import SendTokens from '@/components/send-tokens';
 import Balances from '@/components/balances';
 import WalletSettings from '@/components/wallet-settings';
-import { Wallet, ArrowUpRight, Save, Settings } from 'lucide-react';
+import ManageAddressBook from '@/components/manage-address-book';
+import OutgoingActivity from '@/components/outgoing-activity';
+import IncomingActivity from '@/components/incoming-activity';
+import { Wallet, BookUser, ArrowUpRight, TableProperties, Save, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-type Tab = 'wallets' | 'send' | 'backup' | 'settings';
+type Tab = 'wallets' | 'address-book' | 'send' | 'activity' | 'backup' | 'settings';
 
 const TABS: { id: Tab; icon: LucideIcon }[] = [
   { id: 'wallets', icon: Wallet },
+  { id: 'address-book', icon: BookUser },
   { id: 'send', icon: ArrowUpRight },
+  { id: 'activity', icon: TableProperties },
   { id: 'backup', icon: Save },
   { id: 'settings', icon: Settings },
 ];
@@ -31,9 +36,20 @@ function App() {
             <Balances />
           </div>
         )}
+        {activeTab === 'address-book' && (
+          <div className="p-3">
+            <ManageAddressBook />
+          </div>
+        )}
         {activeTab === 'send' && (
           <div className="p-3">
             <SendTokens />
+          </div>
+        )}
+        {activeTab === 'activity' && (
+          <div className="flex flex-col gap-4 p-3">
+            <OutgoingActivity />
+            <IncomingActivity />
           </div>
         )}
         {activeTab === 'backup' && (
@@ -48,7 +64,7 @@ function App() {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 border-t-2 border-primary bg-background grid grid-cols-4 h-[44px]">
+      <div className="fixed bottom-0 left-0 right-0 border-t-2 border-primary bg-background grid grid-cols-6 h-[44px]">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           return (
